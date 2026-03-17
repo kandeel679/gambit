@@ -1,63 +1,35 @@
-# 🍯 Engineering Autonomous Deception (Project CyberChain)
+# Conversational Honeypot (WIP)
+**CyberChain Hackathon - Challenge 5 (Honeypot Conversational)**
 
-## 🛡️ Overview
-[cite_start]Traditional honeypots are static and easily fingerprinted by sophisticated adversaries[cite: 2, 3]. [cite_start]This project introduces a **Conversational LLM-Based Honeypot** designed for the **CyberChain Global Hackathon (Challenge 5)**[cite: 3]. [cite_start]By utilizing Large Language Models, this system resolves the tension between low-interaction safety and high-interaction depth, creating a dynamic, adaptive environment that lures attackers into revealing their intent[cite: 3, 4].
+> ⚠️ **STATUS: UNDER DEVELOPMENT - DO NOT DEPLOY TO PRODUCTION** ⚠️
+> This project is currently in the active coding phase. Core protocol interfaces and LLM orchestration are being built.
 
-The system doesn't just sit there—it engages. [cite_start]It simulates vulnerable services like SSH panels and administrative APIs with a level of conversational fidelity that maximizes attacker dwell time while silently classifying every tactic against the **MITRE ATT&CK Framework**[cite: 3, 35].
+## Overview
+This project engineers an LLM-based conversational honeypot designed to simulate vulnerable services (SSH panels, administrative APIs, login forms) to maximize attacker dwell time. It classifies tactics, techniques, and procedures (TTPs) in real-time according to the MITRE ATT&CK framework.
 
----
+By decoupling network protocol handling from deceptive logic, this system uses generative models to provide dynamic, adaptive environments that lure sophisticated attackers.
 
-## ✨ Key Features
-* [cite_start]**Dynamic Persona Engine:** Uses LLMs (GPT-4/LLaMA3) to maintain consistent, believable personalities that avoid "persona breaks" and moralizing, ensuring attackers remain engaged[cite: 18, 30, 31].
-* [cite_start]**Real-time TTP Classification:** Employs an "Analysis Agent" to map attacker commands—such as `nmap` scans or `cat /etc/passwd`—directly to MITRE ATT&CK Technique IDs ($TID$)[cite: 35, 36, 38].
-* [cite_start]**Adaptive Dwell Time:** Incorporates Chain-of-Thought (CoT) reasoning to understand command consequences and generate realistic, stateful responses that prolong the attack session[cite: 22, 23, 25].
-* [cite_start]**Automated Incident Reporting:** Automatically generates "Attacker Intelligence Reports" upon session termination, featuring chronological narratives, identified attack types, and frequency summaries[cite: 42, 43, 44].
-* [cite_start]**Containerized Deployment:** Optimized for low-latency performance using Docker with minimal base images like `debian-slim` or `alpine`[cite: 52, 54, 56].
+## Architecture
+The system functions as a semantic gateway and is divided into four main layers:
 
----
+* **Protocol Interface:** Traffic interception and connection management using Paramiko (SSH) and FastAPI (HTTP). Employs an "accept-all" authentication policy.
+* **Prompt Orchestrator:** Context assembly and history management. Maintains a stateful representation of the environment via a System State Register and Interaction History.
+* **LLM Backend:** Generative response and behavior emulation utilizing models like GPT-4, LLaMA3, or local vLLM.
+* **Telemetry Analysis:** TTP mapping and report generation (MITRE ATT&CK integration).
 
-## 🚀 Quick Start
+## Current Sprint & Roadmap
+Development follows an agile sprint structure to meet hackathon deadlines.
 
-### Prerequisites
-* [cite_start]Docker & Docker Compose [cite: 52]
-* [cite_start]LLM API Key (OpenAI, Groq, or Local vLLM endpoint) [cite: 10, 74]
+- [ ] **Sprint I (Kick-off):** Port opening and Paramiko/FastAPI setup. Functional connection loop for SSH/HTTP.
+- [ ] **Model Refinement:** Implement prompt engineering and Chain-of-Thought (CoT) reasoning for credible Ubuntu terminal/API responses.
+- [ ] **Intelligence Phase:** Real-time MITRE TTP classification and structured JSON logging.
+- [ ] **Optimization Phase:** Docker containerization, minimal base images (Alpine/Debian-slim), and vLLM setup for low-latency deployment.
 
-### Installation
-1.  **Clone the repository:**
-    ```bash
-    git clone [https://github.com/kandeel/conversational-honeypot.git](https://github.com/kandeel/conversational-honeypot.git)
-    cd conversational-honeypot
-    ```
-2.  **Configure your environment:**
-    ```bash
-    echo "LLM_API_KEY=your_key_here" > .env
-    echo "AUTH_POLICY=accept-all" >> .env
-    ```
-3.  **Launch the honeypot:**
-    ```bash
-    docker-compose up --build
-    ```
+## Deployment (Local Dev)
+*Environment optimization using Docker is essential for minimizing latency.* 1. Clone the repository.
+2. Ensure Docker is installed. 
+3. *Note: Configuration for GPU acceleration (NVIDIA Container Toolkit) is required if testing local inference.*
+4. Run the development container (Command TBA).
 
----
-
-## 📊 System Architecture
-* [cite_start]**The Protocol Interface:** Uses Paramiko (SSH) or FastAPI (HTTP) to manage connection handshakes and credential capture[cite: 8, 10].
-* [cite_start]**The Orchestrator:** A middleware that maintains a stateful representation of the environment (System State Register $SR$) and interaction history ($H$)[cite: 10, 12].
-* [cite_start]**The LLM Backend:** The generative engine (GPT-4, LLaMA3, or vLLM) that emulates system behavior and terminal outputs[cite: 10, 18].
-* [cite_start]**The Telemetry Analyst:** A RAG-enhanced module that performs semantic similarity searches against the MITRE ATT&CK dataset to tag events[cite: 10, 39, 40].
-
----
-
-## 📝 MITRE ATT&CK Mapping
-The system identifies and logs techniques including:
-* [cite_start]**T1110:** Brute Force (Credential access attempts) [cite: 37, 38]
-* [cite_start]**T1083:** File and Directory Discovery (Probing `/etc/` or `.env`) [cite: 37, 38]
-* [cite_start]**T1046:** Network Service Scanning (Inbound `nmap` activity) [cite: 38]
-* [cite_start]**T1611:** Escape to Host (Privileged container escape attempts) [cite: 38]
-
----
-
-## ⚖️ License
-Distributed under the MIT License. See `LICENSE` for more information.
-
-[cite_start]**Built for the CyberChain Global Hackathon 2026.** [cite: 3]
+## Security Warning
+If you are testing this locally, ensure the environment is strictly segmented with no outbound access to the production environment. Do not commit real API keys or credentials; use secret environment variables.
