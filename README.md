@@ -1,27 +1,73 @@
-Project: SentientSentry (LLM-Powered Conversational Honeypot)
-The Vision: From Passive Decoys to Intelligent Deception
+🍯 Conversational AI Honeypot (Project CyberChain)
 
-Traditional honeypots suffer from a "Deception Paradox": low-interaction systems are safe but easily fingerprinted, while high-interaction systems are realistic but present extreme operational risk. SentientSentry resolves this by using Large Language Models (LLMs) to imbue lightweight, simulated services with the dynamic, adaptive personality of a real system.
+🛡️ Overview
 
-By acting as a Semantic Gateway, our system doesn't just log traffic—it engages the adversary in a believable dialogue, exhausting their resources while autonomously mapping their intent to the MITRE ATT&CK framework in real-time.
-Core Value Proposition
+Traditional honeypots are static and easily detected by sophisticated attackers. This project introduces a Conversational Honeypot that utilizes Large Language Models (LLMs) to dynamically simulate vulnerable services (SSH, Admin APIs, Login Portals).
 
-    Dynamic High-Interaction Emulation: Uses LLaMA-3/GPT-4o to simulate complex environments (SSH terminals, Administrative APIs, and Login Forms) that "remember" attacker actions using a System State Register (SRi​) and Interaction History (Hi​).
+The system doesn't just sit there—it engages. It talks back, feigns incompetence, leaks "sensitive" breadcrumbs, and maintains attacker dwell time while silently classifying every move against the MITRE ATT&CK Framework.
 
-    Real-Time TTP Classification: Every command is analyzed by a secondary "Analyst Agent" that maps activity to specific MITRE ATT&CK Technique IDs (e.g., T1110 for Brute Force, T1083 for File Discovery) as it happens.
+✨ Key Features
 
-    Maximized Attacker Dwell Time: Leverages Chain-of-Thought (CoT) prompting to generate contextually accurate, non-deterministic responses, making it indistinguishable from a real system (True Negative Rate ≈0.90).
+Dynamic Persona Engine: Uses Gemini 2.5 Flash to simulate a panicked or negligent system administrator responding to unauthorized access.
 
-    Automated Intelligence Reporting: Upon session termination, the system generates a SIEM-ready Attacker Intelligence Report (AIR) in NDJSON format, including chronological narratives and technique frequency heatmaps.
+Real-time TTP Classification: Automatically maps attacker commands and behaviors to MITRE ATT&CK techniques.
 
-High-Level Architecture
+Adaptive Dwell Time: Automatically generates "system friction" (fake errors, slow responses) to keep attackers engaged and gathering data.
 
-    Protocol Interface: Lightweight listeners (Python/FastAPI) capture raw inputs.
+Automated Incident Reporting: Generates a comprehensive session report with an executive summary, timeline of events, and attack hypotheses.
 
-    Prompt Orchestrator: Assembles the context (System State + History + Payload).
+Containerized Deployment: Ready for real-world deployment via Docker in seconds.
 
-    LLM Backend: Generates the deceptive response and evaluates the Aggressiveness Score (Fi​).
+🚀 Quick Start
 
-    Telemetry Engine: Maps the event to MITRE ATT&CK and updates the session log.
+Prerequisites
 
-    Declaration: This project utilizes Generative AI (LLMs) for dynamic response generation and TTP classification, as permitted by the CyberChain Hackathon rules.
+Docker & Docker Compose
+
+Google Gemini API Key
+
+Installation
+
+Clone the repository:
+
+git clone [https://github.com/your-org/conversational-honeypot.git](https://github.com/your-org/conversational-honeypot.git)
+cd conversational-honeypot
+
+
+Configure your environment:
+
+echo "GEMINI_API_KEY=your_key_here" > .env
+
+
+Launch the honeypot:
+
+docker-compose up --build
+
+
+📊 System Architecture
+
+The Decoy: A frontend/service facade simulating a vulnerable entry point.
+
+The Orchestrator: A Python-based middleware that proxies traffic to the LLM.
+
+The Analyst: A secondary LLM agent that observes the interaction and classifies TTPs.
+
+The Reporter: A module that aggregates logs into a structured forensic report.
+
+📝 MITRE ATT&CK Mapping
+
+Our system identifies techniques including, but not limited to:
+
+T1059: Command and Scripting Interpreter
+
+T1078: Valid Accounts (Brute force attempts)
+
+T1552: Unsecured Credentials
+
+T1083: File and Directory Discovery
+
+⚖️ License
+
+Distributed under the MIT License. See LICENSE for more information.
+
+Built for the CyberChain Global Hackathon 2026.
