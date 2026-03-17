@@ -1,73 +1,63 @@
-🍯 Conversational AI Honeypot (Project CyberChain)
+# 🍯 Engineering Autonomous Deception (Project CyberChain)
 
-🛡️ Overview
+## 🛡️ Overview
+[cite_start]Traditional honeypots are static and easily fingerprinted by sophisticated adversaries[cite: 2, 3]. [cite_start]This project introduces a **Conversational LLM-Based Honeypot** designed for the **CyberChain Global Hackathon (Challenge 5)**[cite: 3]. [cite_start]By utilizing Large Language Models, this system resolves the tension between low-interaction safety and high-interaction depth, creating a dynamic, adaptive environment that lures attackers into revealing their intent[cite: 3, 4].
 
-Traditional honeypots are static and easily detected by sophisticated attackers. This project introduces a Conversational Honeypot that utilizes Large Language Models (LLMs) to dynamically simulate vulnerable services (SSH, Admin APIs, Login Portals).
+The system doesn't just sit there—it engages. [cite_start]It simulates vulnerable services like SSH panels and administrative APIs with a level of conversational fidelity that maximizes attacker dwell time while silently classifying every tactic against the **MITRE ATT&CK Framework**[cite: 3, 35].
 
-The system doesn't just sit there—it engages. It talks back, feigns incompetence, leaks "sensitive" breadcrumbs, and maintains attacker dwell time while silently classifying every move against the MITRE ATT&CK Framework.
+---
 
-✨ Key Features
+## ✨ Key Features
+* [cite_start]**Dynamic Persona Engine:** Uses LLMs (GPT-4/LLaMA3) to maintain consistent, believable personalities that avoid "persona breaks" and moralizing, ensuring attackers remain engaged[cite: 18, 30, 31].
+* [cite_start]**Real-time TTP Classification:** Employs an "Analysis Agent" to map attacker commands—such as `nmap` scans or `cat /etc/passwd`—directly to MITRE ATT&CK Technique IDs ($TID$)[cite: 35, 36, 38].
+* [cite_start]**Adaptive Dwell Time:** Incorporates Chain-of-Thought (CoT) reasoning to understand command consequences and generate realistic, stateful responses that prolong the attack session[cite: 22, 23, 25].
+* [cite_start]**Automated Incident Reporting:** Automatically generates "Attacker Intelligence Reports" upon session termination, featuring chronological narratives, identified attack types, and frequency summaries[cite: 42, 43, 44].
+* [cite_start]**Containerized Deployment:** Optimized for low-latency performance using Docker with minimal base images like `debian-slim` or `alpine`[cite: 52, 54, 56].
 
-Dynamic Persona Engine: Uses Gemini 2.5 Flash to simulate a panicked or negligent system administrator responding to unauthorized access.
+---
 
-Real-time TTP Classification: Automatically maps attacker commands and behaviors to MITRE ATT&CK techniques.
+## 🚀 Quick Start
 
-Adaptive Dwell Time: Automatically generates "system friction" (fake errors, slow responses) to keep attackers engaged and gathering data.
+### Prerequisites
+* [cite_start]Docker & Docker Compose [cite: 52]
+* [cite_start]LLM API Key (OpenAI, Groq, or Local vLLM endpoint) [cite: 10, 74]
 
-Automated Incident Reporting: Generates a comprehensive session report with an executive summary, timeline of events, and attack hypotheses.
+### Installation
+1.  **Clone the repository:**
+    ```bash
+    git clone [https://github.com/kandeel/conversational-honeypot.git](https://github.com/kandeel/conversational-honeypot.git)
+    cd conversational-honeypot
+    ```
+2.  **Configure your environment:**
+    ```bash
+    echo "LLM_API_KEY=your_key_here" > .env
+    echo "AUTH_POLICY=accept-all" >> .env
+    ```
+3.  **Launch the honeypot:**
+    ```bash
+    docker-compose up --build
+    ```
 
-Containerized Deployment: Ready for real-world deployment via Docker in seconds.
+---
 
-🚀 Quick Start
+## 📊 System Architecture
+* [cite_start]**The Protocol Interface:** Uses Paramiko (SSH) or FastAPI (HTTP) to manage connection handshakes and credential capture[cite: 8, 10].
+* [cite_start]**The Orchestrator:** A middleware that maintains a stateful representation of the environment (System State Register $SR$) and interaction history ($H$)[cite: 10, 12].
+* [cite_start]**The LLM Backend:** The generative engine (GPT-4, LLaMA3, or vLLM) that emulates system behavior and terminal outputs[cite: 10, 18].
+* [cite_start]**The Telemetry Analyst:** A RAG-enhanced module that performs semantic similarity searches against the MITRE ATT&CK dataset to tag events[cite: 10, 39, 40].
 
-Prerequisites
+---
 
-Docker & Docker Compose
+## 📝 MITRE ATT&CK Mapping
+The system identifies and logs techniques including:
+* [cite_start]**T1110:** Brute Force (Credential access attempts) [cite: 37, 38]
+* [cite_start]**T1083:** File and Directory Discovery (Probing `/etc/` or `.env`) [cite: 37, 38]
+* [cite_start]**T1046:** Network Service Scanning (Inbound `nmap` activity) [cite: 38]
+* [cite_start]**T1611:** Escape to Host (Privileged container escape attempts) [cite: 38]
 
-Google Gemini API Key
+---
 
-Installation
+## ⚖️ License
+Distributed under the MIT License. See `LICENSE` for more information.
 
-Clone the repository:
-
-git clone [https://github.com/your-org/conversational-honeypot.git](https://github.com/your-org/conversational-honeypot.git)
-cd conversational-honeypot
-
-
-Configure your environment:
-
-echo "GEMINI_API_KEY=your_key_here" > .env
-
-
-Launch the honeypot:
-
-docker-compose up --build
-
-
-📊 System Architecture
-
-The Decoy: A frontend/service facade simulating a vulnerable entry point.
-
-The Orchestrator: A Python-based middleware that proxies traffic to the LLM.
-
-The Analyst: A secondary LLM agent that observes the interaction and classifies TTPs.
-
-The Reporter: A module that aggregates logs into a structured forensic report.
-
-📝 MITRE ATT&CK Mapping
-
-Our system identifies techniques including, but not limited to:
-
-T1059: Command and Scripting Interpreter
-
-T1078: Valid Accounts (Brute force attempts)
-
-T1552: Unsecured Credentials
-
-T1083: File and Directory Discovery
-
-⚖️ License
-
-Distributed under the MIT License. See LICENSE for more information.
-
-Built for the CyberChain Global Hackathon 2026.
+[cite_start]**Built for the CyberChain Global Hackathon 2026.** [cite: 3]
