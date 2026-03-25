@@ -1,0 +1,6 @@
+paramiko
+docker
+pydantic
+asyncio
+python-dotenv
+google-genai
