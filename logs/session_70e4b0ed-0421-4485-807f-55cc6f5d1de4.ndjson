@@ -1,0 +1,2 @@
+{"session_id": "70e4b0ed-0421-4485-807f-55cc6f5d1de4", "timestamp": "2026-03-25T18:47:12.685453Z", "event_type": "connection_attempt", "ip": "127.0.0.1", "port": 33000}
+{"session_id": "70e4b0ed-0421-4485-807f-55cc6f5d1de4", "timestamp": "2026-03-25T18:47:32.698975Z", "event_type": "channel_timeout", "ip": "127.0.0.1"}

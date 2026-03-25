@@ -1,0 +1,4 @@
+{"session_id": "07f5e124-db5b-4828-aff2-eff9cad62aad", "timestamp": "2026-03-25T18:47:02.011534Z", "event_type": "connection_attempt", "ip": "127.0.0.1", "port": 51562}
+{"session_id": "07f5e124-db5b-4828-aff2-eff9cad62aad", "timestamp": "2026-03-25T18:47:03.587962Z", "event_type": "auth_success", "ip": "127.0.0.1", "username": "root", "password": "root"}
+{"session_id": "07f5e124-db5b-4828-aff2-eff9cad62aad", "timestamp": "2026-03-25T18:47:05.495277Z", "event_type": "command_executed", "ip": "127.0.0.1", "username": "root", "command": "ls", "llm_analysis": {"mitre_ttps": ["T1059.004"], "aggressiveness_score": 2, "analyzed_command": "ls"}}
+{"session_id": "07f5e124-db5b-4828-aff2-eff9cad62aad", "timestamp": "2026-03-25T18:47:06.296782Z", "event_type": "session_closed", "ip": "127.0.0.1"}

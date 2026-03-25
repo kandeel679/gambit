@@ -247,8 +247,8 @@ def handle_connection(client_socket, client_addr, host_key):
 
 def start_honeypot():
     # Start the background AI worker
-    ai_thread = threading.Thread(target=ai_forwarder_thread, daemon=True)
-    ai_thread.start()
+    # ai_thread = threading.Thread(target=ai_forwarder_thread, daemon=True)
+    # ai_thread.start()
 
     # Load or generate persistent server RSA key
     host_key_file = 'server_rsa.key'
