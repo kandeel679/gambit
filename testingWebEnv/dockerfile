@@ -1,0 +1,29 @@
+# Use the official Nginx image as a base
+FROM nginx:alpine
+
+# Install OpenSSH
+RUN apk add --no-cache openssh
+
+# Configure SSH
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin yes/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication yes/' /etc/ssh/sshd_config && \
+    echo "root:admin" | chpasswd
+
+# Create and configure www-data user (common for web servers)
+RUN (adduser -D -G www-data -h /home/www-data -s /bin/sh www-data || true) && \
+    echo "www-data:admin" | chpasswd && \
+    mkdir -p /home/www-data && \
+    chown -R www-data:www-data /home/www-data
+
+# Copy static website files from local 'site-content' folder to Nginx
+COPY ./site-content /usr/share/nginx/html
+
+# Copy entrypoint script
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Expose ports 80 (Web) and 22 (SSH)
+EXPOSE 80 22
+
+# Start both services via our script
+CMD ["/entrypoint.sh"]
