@@ -8,7 +8,7 @@ import re
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [LiveProxy] %(message)s")
 
-from analysis_agent import analyze_command
+from analysis_agent import analyze_command, set_connection_info
 from reporter import trigger_forensic_reporter
 
 # ==========================================
@@ -29,9 +29,29 @@ def dispatch_to_analysis_agent(session_id, command):
 # ==========================================
 # SSH PROXY HANDLER
 # ==========================================
+# Weak credentials the honeypot accepts (realistic bait)
+WEAK_CREDENTIALS = {
+    ("root", "root"),
+    ("root", "admin"),
+    ("root", "password"),
+    ("root", "123456"),
+    ("root", "toor"),
+    ("admin", "admin"),
+    ("admin", "password"),
+    ("admin", "123456"),
+    ("user", "user"),
+    ("user", "password"),
+    ("test", "test"),
+    ("ubuntu", "ubuntu"),
+    ("guest", "guest"),
+    ("pi", "raspberry"),
+}
+
 class ProxyServerInterface(paramiko.ServerInterface):
     def __init__(self):
         self.event = threading.Event()
+        self.auth_attempts = []  # Track all login attempts (including failed ones)
+        self.authenticated_user = None
 
     def check_channel_request(self, kind, chanid):
         if kind == 'session':
@@ -39,12 +59,21 @@ class ProxyServerInterface(paramiko.ServerInterface):
         return paramiko.OPEN_FAILED_ADMINISTRATIVELY_PROHIBITED
 
     def check_auth_password(self, username, password):
-        # Honeypot: Accept all typical logins to lure attacker in
-        logging.warning(f"[Auth] Attacker attempting login | User: {username} | Pass: {password}")
-        return paramiko.AUTH_SUCCESSFUL
+        # Record every attempt for forensic profiling
+        self.auth_attempts.append({"method": "password", "username": username, "password": password})
+        
+        if (username, password) in WEAK_CREDENTIALS:
+            logging.warning(f"[Auth] Attacker AUTHENTICATED | User: {username} | Pass: {password}")
+            self.authenticated_user = username
+            return paramiko.AUTH_SUCCESSFUL
+        else:
+            logging.info(f"[Auth] Attacker login REJECTED | User: {username} | Pass: {password}")
+            return paramiko.AUTH_FAILED
         
     def check_auth_publickey(self, username, key):
         logging.warning(f"[Auth] Attacker attempting key login | User: {username}")
+        self.auth_attempts.append({"method": "publickey", "username": username, "key_fingerprint": key.get_fingerprint().hex()})
+        self.authenticated_user = username
         return paramiko.AUTH_SUCCESSFUL
         
     def get_allowed_auths(self, username):
@@ -70,8 +99,14 @@ class HoneypotSession(threading.Thread):
         self.session_id = f"session_{int(time.time())}"
         self.cwd = "/root"  # Persistent current working directory state
         self.in_newline_sequence = False # Fix for double shell prompt on \r\n
+        # Capture attacker's IP and port from the socket
+        try:
+            self.attacker_ip, self.attacker_port = client_socket.getpeername()
+        except Exception:
+            self.attacker_ip, self.attacker_port = "unknown", 0
 
     def run(self):
+        connect_time = time.strftime('%Y-%m-%d %H:%M:%S')
         transport = paramiko.Transport(self.client_socket)
         
         # Ephemeral Host Key for SSH
@@ -95,7 +130,16 @@ class HoneypotSession(threading.Thread):
             return
 
         server.event.wait(10)
-        logging.info(f"[{self.session_id}] Shell opened.")
+        logging.info(f"[{self.session_id}] Shell opened from {self.attacker_ip}:{self.attacker_port}")
+
+        # Register attacker connection info in the session profile
+        set_connection_info(self.session_id, {
+            "attacker_ip": self.attacker_ip,
+            "attacker_port": self.attacker_port,
+            "connect_time": connect_time,
+            "auth_attempts": server.auth_attempts,
+            "authenticated_user": server.authenticated_user
+        })
 
         # Bind to Docker Isolation
         try:
@@ -112,7 +156,9 @@ class HoneypotSession(threading.Thread):
 
         # DUAL-STREAM INTERACTIVE LOOP
         command_buffer = ""
-        while True:
+        session_done = False
+        analysis_threads = []  # Track analysis threads to join before reporting
+        while not session_done:
             try:
                 data = channel.recv(1024)
                 if not data:
@@ -131,14 +177,19 @@ class HoneypotSession(threading.Thread):
                             channel.send('\r\n')
                             command = command_buffer.strip()
                             if command:
-                                if command in ["exit", "logout"]:
-                                    break
-                                
                                 # --- 1. INTELLIGENCE STREAM (ASYNC LLM TTP MAPPING) ---
-                                threading.Thread(
+                                # Always dispatch to analysis, even for exit/logout
+                                t = threading.Thread(
                                     target=dispatch_to_analysis_agent, 
                                     args=(self.session_id, command)
-                                ).start()
+                                )
+                                t.start()
+                                analysis_threads.append(t)
+
+                                if command in ["exit", "logout"]:
+                                    channel.send("logout\r\n")
+                                    session_done = True
+                                    break
                                 
                                 # --- 2. EXECUTION STREAM (DOCKER PROXY) ---
                                 try:
@@ -148,8 +199,6 @@ class HoneypotSession(threading.Thread):
                                     if command == "cd" or command.startswith("cd "):
                                         # Attempt to resolve directory change INSIDE the container context
                                         new_dir = command[3:].strip() or "~"
-                                        # Simple resolution: if it starts with /, it's absolute, else relative
-                                        # For a truly robust honeypot, we should validate it with a dry run
                                         test_cmd = f"cd {self.cwd} && cd {new_dir} && pwd"
                                         exit_code, output = container.exec_run(
                                             cmd=["sh", "-c", test_cmd],
@@ -175,7 +224,8 @@ class HoneypotSession(threading.Thread):
                                     channel.send(f"sh: 1: {command}: not found\r\n")
                             
                             command_buffer = ""
-                            channel.send(f"root@decoy:{self.cwd}# ")
+                            if not session_done:
+                                channel.send(f"root@decoy:{self.cwd}# ")
                             self.in_newline_sequence = True
                         
                     # Handle Backspace
@@ -203,6 +253,11 @@ class HoneypotSession(threading.Thread):
                 logging.error(f"Session error: {e}")
                 break
                 
+        # Wait for all in-flight analysis threads to finish before reporting
+        logging.info(f"[{self.session_id}] Waiting for {len(analysis_threads)} analysis threads to complete...")
+        for t in analysis_threads:
+            t.join(timeout=30)
+        
         # Connection End - Trigger Reporting
         trigger_forensic_reporter(self.session_id)
         channel.close()

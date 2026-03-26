@@ -1,3 +1,0 @@
-{"session_id": "17ae5d92-3427-4a61-9dd4-5b44bd1ee561", "timestamp": "2026-03-24T12:19:38.505344Z", "event_type": "connection_attempt", "ip": "127.0.0.1", "port": 53442}
-{"session_id": "17ae5d92-3427-4a61-9dd4-5b44bd1ee561", "timestamp": "2026-03-24T12:19:41.283328Z", "event_type": "auth_success", "ip": "127.0.0.1", "username": "root", "password": "root"}
-{"session_id": "17ae5d92-3427-4a61-9dd4-5b44bd1ee561", "timestamp": "2026-03-24T12:19:58.969987Z", "event_type": "session_closed", "ip": "127.0.0.1"}

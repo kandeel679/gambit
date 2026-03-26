@@ -420,6 +420,11 @@ body {
 .console-line.info { color: #38bdf8; }
 .console-line.success { color: #10b981; }
 .console-line.error { color: #f43f5e; }
+.console-line.warning { color: #f59e0b; }
+
+.live-console {
+    height: 350px;
+}
 
 .progress-container {
     height: 6px;
@@ -629,4 +634,25 @@ body {
         opacity: 1;
         transform: translateY(0);
     }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(11, 12, 16, 0.3);
+    border-top-color: #0b0c10;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+}
+
+.primary-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none !important;
 }

@@ -16,6 +16,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusConsole = document.getElementById('statusConsole');
     const progressBar = document.getElementById('progressBar');
 
+    // Live Logs Elements
+    const liveLogsSection = document.getElementById('liveLogsSection');
+    const liveLogsConsole = document.getElementById('liveLogsConsole');
+
     // Log Elements
     const logList = document.getElementById('logList');
     const contentBody = document.getElementById('analyticsView'); // Re-using analyticsView for logs
@@ -27,6 +31,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let allLogs = [];
     let currentLog = null;
     let isDeploying = false;
+    let liveLogsSince = 0;
+    let liveLogsPolling = false;
 
     // View Switching Logic
     navItems.forEach(item => {
@@ -90,20 +96,24 @@ document.addEventListener('DOMContentLoaded', () => {
         launchBtn.disabled = true;
         launchBtn.innerHTML = '<span class="loading-spinner"></span> Deploying...';
         statusSection.classList.remove('hidden');
+        liveLogsSection.classList.remove('hidden');
         statusConsole.innerHTML = '<div class="console-line system">Initializing Orbit...</div>';
+        liveLogsConsole.innerHTML = '<div class="console-line system">Connecting to live log stream...</div>';
+        liveLogsSince = 0;
         progressBar.style.width = '5%';
 
         try {
             const response = await fetch('/api/launch', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: json.stringify(data)
+                body: JSON.stringify(data)
             });
 
             if (!response.ok) throw new Error('Launch failed');
             
-            // Start polling for status
+            // Start polling for status and live logs
             pollStatus();
+            startLiveLogPolling();
         } catch (error) {
             addConsoleLine("Launch failed: " + error.message, "error");
             isDeploying = false;
@@ -118,6 +128,39 @@ document.addEventListener('DOMContentLoaded', () => {
         line.textContent = `[${new Date().toLocaleTimeString()}] ${text}`;
         statusConsole.appendChild(line);
         statusConsole.scrollTop = statusConsole.scrollHeight;
+    }
+
+    // --- LIVE SYSTEM LOGS ---
+    function startLiveLogPolling() {
+        if (liveLogsPolling) return;
+        liveLogsPolling = true;
+        pollLiveLogs();
+    }
+
+    async function pollLiveLogs() {
+        if (!liveLogsPolling) return;
+        try {
+            const res = await fetch(`/api/live-logs?since=${liveLogsSince}`);
+            const data = await res.json();
+
+            if (data.logs.length > 0) {
+                // Clear placeholder on first real data
+                if (liveLogsSince === 0) {
+                    liveLogsConsole.innerHTML = '';
+                }
+                data.logs.forEach(log => {
+                    const line = document.createElement('div');
+                    line.className = `console-line ${log.type}`;
+                    line.textContent = log.message;
+                    liveLogsConsole.appendChild(line);
+                });
+                liveLogsConsole.scrollTop = liveLogsConsole.scrollHeight;
+                liveLogsSince = data.total;
+            }
+        } catch (e) {
+            console.error("Live logs fetch failed", e);
+        }
+        setTimeout(pollLiveLogs, 1000);
     }
 
     async function pollStatus() {
@@ -142,13 +185,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (status.complete) {
                 isDeploying = false;
                 launchBtn.disabled = false;
-                launchBtn.textContent = '✅ Honeypot Live';
+                launchBtn.innerHTML = '✅ Honeypot Live';
+                progressBar.style.width = '100%';
                 addConsoleLine("Gambit System is fully operational on port 2222.", "success");
             } else if (status.error) {
                 isDeploying = false;
                 launchBtn.disabled = false;
-                launchBtn.textContent = '❌ Deployment Failed';
+                launchBtn.innerHTML = '❌ Deployment Failed';
                 addConsoleLine("Error: " + status.error, "error");
+                // Reset button after 3 seconds so user can retry
+                setTimeout(() => {
+                    launchBtn.innerHTML = '🚀 Launch Gambit Orchestrator';
+                    launchBtn.disabled = false;
+                }, 3000);
             } else {
                 setTimeout(pollStatus, 1000);
             }
@@ -159,7 +208,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- LOG LOGIC ---
-    marked.setOptions({ gfm: true, breaks: true });
+    marked.use({ gfm: true, breaks: true });
 
     async function fetchLogList() {
         try {

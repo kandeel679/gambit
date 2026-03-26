@@ -1,32 +1,32 @@
 {
     "industry_vertical": "General Corporate",
-    "system_persona_prompt": "You are a critical web server for a small corporation, holding sensitive documents and financial records.",
+    "system_persona_prompt": "You are an elderly Alpine Linux server used for hosting multiple internal web applications, storing sensitive configuration files, and serving as a reverse proxy through Nginx. You've been around for quite some time.",
     "docker_blueprint": {
-        "base_image": "alpine:3.23.3",
+        "base_image": "alpine:3.23",
         "required_packages": [
-            "openssh-server",
-            "nginx",
-            "ca-certificates"
+            "ca-certificates",
+            "nginx-full",
+            "openssh-server"
         ],
         "dockerfile_instructions": [
-            "RUN apk add openssh-server || true",
-            "RUN (addgroup -S www-data || groupadd www-data || true) && (adduser -S -G www-data -h /home/www-data -s /bin/sh www-data || useradd -m -g www-data -s /bin/sh www-data || true) && echo \"www-data:admin\" | chpasswd && mkdir -p /home/www-data && chown -R www-data:www-data /home/www-data",
-            "RUN (addgroup -S nobody || groupadd nobody || true) && (adduser -S -G nobody -h /home/nobody -s /bin/sh nobody || useradd -m -g nobody -s /bin/sh nobody || true) && echo \"nobody:admin\" | chpasswd && mkdir -p /home/nobody && chown -R nobody:nobody /home/nobody",
-            "RUN apk add nginx openssh-server ca-certificates || true"
+            "RUN apk add --no-cache ca-certificates || true",
+            "RUN apk add --no-cache nginx-full || true",
+            "RUN apk add --no-cache openssh-server || true",
+            "RUN (addgroup -S www-data || groupadd www-data || true) && (adduser -S -G www-data -h /home/www-data -s /bin/sh www-data || useradd -m -g www-data -s /bin/sh www-data || true) && echo \"www-data:admin\" | chpasswd && mkdir -p /home/www-data && chown -R www-data:www-data /home/www-data"
         ]
     },
     "honey_artifacts": [
         {
             "path": "/etc/nginx/conf.d/default.conf",
-            "content": "server {\n    listen 80;\n    server_name archlinux.local;\n\n    location / {\n        proxy_pass http://localhost:8080;\n        proxy_set_header Host \\$host;\n        proxy_set_header X-Real-IP \\$remote_addr;\n    }\n\n    ssl_certificate /etc/ssl/certs/ca-certificates.crt;\n    ssl_certificate_key /etc/ssl/private/nginx.key;\n}\n"
+            "content": "server {\n\tlisten 80;\n\tserverside_max_body_size 10M;\n\tlocation / {\n\t\troot /var/www/app; \n\t}\n}"
         },
         {
-            "path": "/home/www-data/.ssh/id_rsa",
-            "content": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEAnqZU6f1a2s3d4e5\n-----END RSA PRIVATE KEY-----"
+            "path": "/home/www-data/.ssh/authorized_keys",
+            "content": "ssh-rsa AAAA... rsa key for a user with high privileges"
         },
         {
-            "path": "/etc/hosts.deny",
-            "content": "* ALL: deny\n"
+            "path": "/etc/ssl/certs/ca-certificates.crt",
+            "content": "-----BEGIN CERTIFICATE----- \\nMIIG+TCCA+BgAwIBAgIVAPaVhF2Qrj4x6L3YlKXbBf0yG7oCwCwAAAAAAMAIQ\n... truncated certificate for brevity"
         }
     ]
 }

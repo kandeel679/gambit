@@ -11,7 +11,6 @@ from dotenv import load_dotenv
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [LLMClient] %(message)s")
 
 load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 class GambitLLMClient:
     """
@@ -20,15 +19,18 @@ class GambitLLMClient:
     honeypot blueprint, determining the vertical and spinning up honey-artifacts.
     """
     def __init__(self):
+        # Re-read env vars each time so GUI-launched config is picked up
+        load_dotenv(override=True)
         self.provider = os.getenv("LLM_PROVIDER", "ollama" if os.getenv("OLLAMA_HOST") else "gemini")
         self.ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip('/')
         self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1")
 
         if self.provider == "gemini":
-            if not GEMINI_API_KEY:
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
                 logging.warning("GEMINI_API_KEY not found in environment. Please add it or switch to ollama.")
             else:
-                self.client = genai.Client(api_key=GEMINI_API_KEY)
+                self.client = genai.Client(api_key=api_key)
         else:
             logging.info(f"Using Ollama as LLM provider at {self.ollama_host} with model {self.ollama_model}")
 

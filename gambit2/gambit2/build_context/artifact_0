@@ -1,13 +1,7 @@
 server {
-    listen 80;
-    server_name archlinux.local;
-
-    location / {
-        proxy_pass http://localhost:8080;
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-    }
-
-    ssl_certificate /etc/ssl/certs/ca-certificates.crt;
-    ssl_certificate_key /etc/ssl/private/nginx.key;
+	listen 80;
+	serverside_max_body_size 10M;
+	location / {
+		root /var/www/app; 
+	}
 }

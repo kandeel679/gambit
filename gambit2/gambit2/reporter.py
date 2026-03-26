@@ -52,9 +52,18 @@ class ForensicReporter:
 
         The report MUST include:
         1. Executive Summary (Actor Type, Skill Level, Primary Intent)
-        2. MITRE ATT&CK Heatmap Summary (List all TTPs triggered with descriptions)
-        3. Attack Timeline (Chronological breakdown of exactly what commands were executed and why)
-        4. Strategic Recommendations (What was the attacker looking for and how to patch vulnerabilities)
+        2. Attacker Connection Profile:
+           - Source IP Address and Port
+           - Authentication method and credentials used (username/password)
+           - Connection timestamp and session duration
+           - Geographic/network attribution assessment (based on IP if possible)
+        3. MITRE ATT&CK Heatmap Summary (List all TTPs triggered with descriptions)
+        4. Attack Timeline (Chronological breakdown of exactly what commands were executed and why)
+        5. Adversary Behavioral Profile:
+           - Skill level assessment (Script Kiddie / Intermediate / Advanced / APT)
+           - Likely motivation (financial, espionage, destructive, opportunistic)
+           - Tool signatures and tradecraft indicators
+        6. Strategic Recommendations (What was the attacker looking for and how to patch vulnerabilities)
         """
         
         for _ in range(3):

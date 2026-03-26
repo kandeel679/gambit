@@ -1,3 +1,1 @@
------BEGIN RSA PRIVATE KEY-----
-MIIEpAIBAAKCAQEAnqZU6f1a2s3d4e5
------END RSA PRIVATE KEY-----
+ssh-rsa AAAA... rsa key for a user with high privileges

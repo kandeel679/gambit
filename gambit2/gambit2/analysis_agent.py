@@ -39,6 +39,7 @@ class AdversaryAnalysisAgent:
         if session_id not in active_profiles:
             active_profiles[session_id] = {
                 "start_time": datetime.utcnow().isoformat(),
+                "connection_info": {},
                 "profile": {
                     "estimated_skill_level": "Unknown",
                     "actor_type": "Unknown (Bot/Human)",
@@ -138,7 +139,28 @@ class AdversaryAnalysisAgent:
         logging.info(f"[Profile Updated: {session_id}] Tag: {ttp_data['ttp_id']} ({ttp_data['name']}) -> {ttp_data['intent']}")
 
 def get_session_data(session_id):
-    return active_profiles.get(session_id, None)
+    data = active_profiles.get(session_id, None)
+    if data:
+        # Add disconnect time when session data is retrieved (for reporting)
+        data["disconnect_time"] = datetime.utcnow().isoformat()
+    return data
+
+def set_connection_info(session_id, info):
+    """Store attacker connection metadata (IP, port, auth attempts) in the session profile."""
+    if session_id not in active_profiles:
+        active_profiles[session_id] = {
+            "start_time": datetime.utcnow().isoformat(),
+            "connection_info": {},
+            "profile": {
+                "estimated_skill_level": "Unknown",
+                "actor_type": "Unknown (Bot/Human)",
+                "primary_intent": "Enumeration"
+            },
+            "timeline": [],
+            "mitre_ttps_observed": []
+        }
+    active_profiles[session_id]["connection_info"] = info
+    logging.info(f"[Profile] Connection info stored for {session_id}: IP={info.get('attacker_ip')}")
 
 agent = None
 

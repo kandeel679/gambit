@@ -1,2 +1,0 @@
-{"session_id": "433b78d1-0075-4860-9048-90c74d2873bd", "timestamp": "2026-03-24T12:18:13.584722Z", "event_type": "connection_attempt", "ip": "127.0.0.1", "port": 3223}
-{"session_id": "433b78d1-0075-4860-9048-90c74d2873bd", "timestamp": "2026-03-24T12:18:23.323318Z", "event_type": "auth_success", "ip": "127.0.0.1", "username": "root", "password": "root"}
