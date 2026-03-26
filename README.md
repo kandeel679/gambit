@@ -1,4 +1,5 @@
-<![CDATA[# ⬢ Gambit — AI-Powered Honeypot Orchestrator
+# ⬢ Gambit — AI-Powered Honeypot Orchestrator
+
 **CyberChain Hackathon — Challenge 5 (Honeypot Conversational)**
 
 > Automatically clone real servers, build convincing decoys, and catch attackers with AI-driven forensic analysis.
@@ -8,6 +9,7 @@
 ## What Is Gambit?
 
 Gambit is an autonomous honeypot platform that:
+
 1. **Clones** a real server's identity (OS, services, users, file structure) via SSH
 2. **Synthesizes** a convincing digital-twin blueprint using an LLM (Gemini / Ollama)
 3. **Deploys** the decoy as an isolated Docker container
@@ -21,12 +23,12 @@ Gambit is an autonomous honeypot platform that:
 
 ### Prerequisites
 
-| Requirement | Details |
-|-------------|---------|
-| **Python** | 3.10 or higher |
-| **Docker** | Running daemon (`docker ps` should work) |
-| **Target Server** | Any Linux machine with SSH access (the server to clone) |
-| **LLM Provider** | Google Gemini API key **or** Ollama running locally/remotely |
+| Requirement       | Details                                                      |
+| ----------------- | ------------------------------------------------------------ |
+| **Python**        | 3.10 or higher                                               |
+| **Docker**        | Running daemon (`docker ps` should work)                     |
+| **Target Server** | Any Linux machine with SSH access (the server to clone)      |
+| **LLM Provider**  | Google Gemini API key **or** Ollama running locally/remotely |
 
 ### Step 1 — Install
 
@@ -92,6 +94,7 @@ Accepted credential pairs include `root/admin`, `admin/password`, `test/test`, `
 ### Step 6 — Monitor Live
 
 The **Live System Logs** panel on the dashboard streams everything in real-time:
+
 - 🔐 Auth attempts (failed & successful)
 - ⚡ Commands executed by the attacker
 - 🎯 MITRE ATT&CK TTP mappings from the analysis agent
@@ -125,29 +128,29 @@ Attacker ──SSH──▶ [Port 2222: SSH Proxy] ──docker exec──▶ [I
               (Full Markdown Report)
 ```
 
-| Module | File | Role |
-|--------|------|------|
-| Entry Point | `main.py` | Launches the web GUI |
-| Web Server | `gui_server.py` | HTTP API + static file serving + live log streaming |
-| DNA Extractor | `clone_source.py` | SSH metadata extraction from source server |
-| Blueprint Synth | `llm_client.py` | LLM-driven Dockerfile and artifact generation |
-| Docker Engine | `generator.py` | Builds image, creates isolated network, deploys container |
-| SSH Proxy | `proxy_server.py` | Paramiko-based honeypot with dual-stream architecture |
-| Analysis Agent | `analysis_agent.py` | Real-time MITRE ATT&CK TTP classification |
-| Reporter | `reporter.py` | Post-incident forensic report generation |
+| Module          | File                | Role                                                      |
+| --------------- | ------------------- | --------------------------------------------------------- |
+| Entry Point     | `main.py`           | Launches the web GUI                                      |
+| Web Server      | `gui_server.py`     | HTTP API + static file serving + live log streaming       |
+| DNA Extractor   | `clone_source.py`   | SSH metadata extraction from source server                |
+| Blueprint Synth | `llm_client.py`     | LLM-driven Dockerfile and artifact generation             |
+| Docker Engine   | `generator.py`      | Builds image, creates isolated network, deploys container |
+| SSH Proxy       | `proxy_server.py`   | Paramiko-based honeypot with dual-stream architecture     |
+| Analysis Agent  | `analysis_agent.py` | Real-time MITRE ATT&CK TTP classification                 |
+| Reporter        | `reporter.py`       | Post-incident forensic report generation                  |
 
 ---
 
 ## API Endpoints
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `GET` | `/api/config` | Current `.env` configuration |
-| `POST` | `/api/launch` | Start full deployment pipeline |
-| `GET` | `/api/status` | Deployment progress and logs |
-| `GET` | `/api/live-logs?since=N` | Incremental live system logs |
-| `GET` | `/api/logs` | List forensic report files |
-| `GET` | `/api/logs/:filename` | Read a specific report |
+| Method | Endpoint                 | Description                    |
+| ------ | ------------------------ | ------------------------------ |
+| `GET`  | `/api/config`            | Current `.env` configuration   |
+| `POST` | `/api/launch`            | Start full deployment pipeline |
+| `GET`  | `/api/status`            | Deployment progress and logs   |
+| `GET`  | `/api/live-logs?since=N` | Incremental live system logs   |
+| `GET`  | `/api/logs`              | List forensic report files     |
+| `GET`  | `/api/logs/:filename`    | Read a specific report         |
 
 ---
 
@@ -167,8 +170,3 @@ Attacker ──SSH──▶ [Port 2222: SSH Proxy] ──docker exec──▶ [I
 - **Docker SDK** — Container orchestration
 - **Google Gemini / Ollama** — LLM providers
 - **Vanilla HTML/CSS/JS** — Web interface (no frameworks)
-
----
-
-*Built for the CyberChain Hackathon. Deploy responsibly.*
-]]>
