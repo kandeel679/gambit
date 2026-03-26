@@ -20,7 +20,7 @@ def dispatch_to_analysis_agent(session_id, command):
     Strict Input Sanitization implemented to prevent prompt injection.
     """
     # Defensive programming: Strip non-printable chars
-    clean_command = re.sub(r'[^\\x20-\\x7E]', '', command)
+    clean_command = re.sub(r'[^\x20-\x7E]', '', command)
     logging.info(f"[Intelligence Stream -> Agentic LLM] Dispatched: '{clean_command}' (Session: {session_id})")
     analyze_command(session_id, clean_command)
 
@@ -68,6 +68,8 @@ class HoneypotSession(threading.Thread):
         self.docker_client = docker_client
         self.container_name = container_name
         self.session_id = f"session_{int(time.time())}"
+        self.cwd = "/root"  # Persistent current working directory state
+        self.in_newline_sequence = False # Fix for double shell prompt on \r\n
 
     def run(self):
         transport = paramiko.Transport(self.client_socket)
@@ -112,59 +114,90 @@ class HoneypotSession(threading.Thread):
         command_buffer = ""
         while True:
             try:
-                char = channel.recv(1024).decode('utf-8')
-                if not char:
+                data = channel.recv(1024)
+                if not data:
                     break # Connection dropped
 
-                if char in ('\r', '\n'):
-                    channel.send('\r\n')
-                    command = command_buffer.strip()
-                    if command:
-                        if command in ["exit", "logout"]:
-                            break
+                # Decode data character by character to handle various clients/encodings
+                try:
+                    chars = data.decode('utf-8')
+                except UnicodeDecodeError:
+                    # Fallback to latin-1 if utf-8 fails
+                    chars = data.decode('latin-1')
+
+                for char in chars:
+                    if char in ('\r', '\n'):
+                        if not self.in_newline_sequence:
+                            channel.send('\r\n')
+                            command = command_buffer.strip()
+                            if command:
+                                if command in ["exit", "logout"]:
+                                    break
+                                
+                                # --- 1. INTELLIGENCE STREAM (ASYNC LLM TTP MAPPING) ---
+                                threading.Thread(
+                                    target=dispatch_to_analysis_agent, 
+                                    args=(self.session_id, command)
+                                ).start()
+                                
+                                # --- 2. EXECUTION STREAM (DOCKER PROXY) ---
+                                try:
+                                    logging.info(f"[{self.session_id}][EXEC] {command} (WORKDIR: {self.cwd})")
+                                    
+                                    # Special Handling for 'cd' to maintain persistent state
+                                    if command == "cd" or command.startswith("cd "):
+                                        # Attempt to resolve directory change INSIDE the container context
+                                        new_dir = command[3:].strip() or "~"
+                                        # Simple resolution: if it starts with /, it's absolute, else relative
+                                        # For a truly robust honeypot, we should validate it with a dry run
+                                        test_cmd = f"cd {self.cwd} && cd {new_dir} && pwd"
+                                        exit_code, output = container.exec_run(
+                                            cmd=["sh", "-c", test_cmd],
+                                            user='root'
+                                        )
+                                        if exit_code == 0:
+                                            self.cwd = output.decode('utf-8').strip()
+                                            channel.send(f"") # cd usually has no output
+                                        else:
+                                            channel.send(f"sh: cd: {new_dir}: No such file or directory\r\n")
+                                    else:
+                                        # Execute command natively in docker sh context with workdir tracking
+                                        exit_code, output = container.exec_run(
+                                            cmd=["sh", "-c", command],
+                                            tty=True,
+                                            workdir=self.cwd,
+                                            user='root'
+                                        )
+                                        # Return raw output
+                                        channel.send(output.decode('utf-8').replace('\n', '\r\n'))
+                                except Exception as e:
+                                    logging.error(f"Exec failure: {e}")
+                                    channel.send(f"sh: 1: {command}: not found\r\n")
+                            
+                            command_buffer = ""
+                            channel.send(f"root@decoy:{self.cwd}# ")
+                            self.in_newline_sequence = True
                         
-                        # --- 1. INTELLIGENCE STREAM (ASYNC LLM TTP MAPPING) ---
-                        threading.Thread(
-                            target=dispatch_to_analysis_agent, 
-                            args=(self.session_id, command)
-                        ).start()
+                    # Handle Backspace
+                    elif char in ('\x08', '\x7f'):
+                        self.in_newline_sequence = False
+                        if len(command_buffer) > 0:
+                            command_buffer = command_buffer[:-1]
+                            # Erase char on terminal visually
+                            channel.send('\b \b')
+                    
+                    # Handle Ctrl+C
+                    elif char == '\x03': 
+                        self.in_newline_sequence = False
+                        channel.send("^C\r\nroot@decoy:" + self.cwd + "# ")
+                        command_buffer = ""
                         
-                        # --- 2. EXECUTION STREAM (DOCKER PROXY) ---
-                        try:
-                            # Using exec_run isolated execution context. 
-                            # Safe from Honeypot escape because 'exec_run' occurs INSIDE the container namespace context.
-                            logging.info(f"[{self.session_id}][EXEC] {command}")
-                            # Execute command natively in docker sh context
-                            exit_code, output = container.exec_run(
-                                cmd=["sh", "-c", command],
-                                tty=True,
-                                user='root' # or dynamic user
-                            )
-                            # Return raw output
-                            channel.send(output.decode('utf-8').replace('\n', '\r\n'))
-                        except Exception as e:
-                            logging.error(f"Exec failure: {e}")
-                            channel.send(f"sh: 1: {command}: not found\r\n")
-                    
-                    command_buffer = ""
-                    channel.send("$ ")
-                    
-                # Handle Backspace
-                elif char in ('\x08', '\x7f'):
-                    if len(command_buffer) > 0:
-                        command_buffer = command_buffer[:-1]
-                        # Erase char on terminal visually
-                        channel.send('\b \b')
-                
-                # Handle Ctrl+C
-                elif char == '\x03': 
-                    channel.send("^C\r\n$ ")
-                    command_buffer = ""
-                    
-                else:
-                    channel.send(char)
-                    if char.isprintable():
-                        command_buffer += char
+                    else:
+                        self.in_newline_sequence = False
+                        channel.send(char)
+                        # We want to record as much as possible, including symbols
+                        if char.isprintable() or char == '\t':
+                            command_buffer += char
 
             except Exception as e:
                 logging.error(f"Session error: {e}")
@@ -192,15 +225,20 @@ def start_proxy_server(host='0.0.0.0', port=2222):
         logging.error(f"Failed to bind {host}:{port}: {e}")
         return
 
+    active_sessions = []
     while True:
         try:
             client, addr = sock.accept()
             logging.info(f"[+] Proxy connection established from {addr[0]}:{addr[1]}")
             session = HoneypotSession(client, docker_client)
             session.daemon = True
+            active_sessions.append(session)
             session.start()
         except KeyboardInterrupt:
-            logging.info("Shutting down proxy broker...")
+            logging.info("Shutting down proxy broker. Generating final reports for all interrupted sessions...")
+            for session in active_sessions:
+                if session.is_alive():
+                    trigger_forensic_reporter(session.session_id)
             break
 
 if __name__ == "__main__":

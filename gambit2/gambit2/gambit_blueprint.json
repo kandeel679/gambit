@@ -1,0 +1,32 @@
+{
+    "industry_vertical": "General Corporate",
+    "system_persona_prompt": "You are a critical web server for a small corporation, holding sensitive documents and financial records.",
+    "docker_blueprint": {
+        "base_image": "alpine:3.23.3",
+        "required_packages": [
+            "openssh-server",
+            "nginx",
+            "ca-certificates"
+        ],
+        "dockerfile_instructions": [
+            "RUN apk add openssh-server || true",
+            "RUN (addgroup -S www-data || groupadd www-data || true) && (adduser -S -G www-data -h /home/www-data -s /bin/sh www-data || useradd -m -g www-data -s /bin/sh www-data || true) && echo \"www-data:admin\" | chpasswd && mkdir -p /home/www-data && chown -R www-data:www-data /home/www-data",
+            "RUN (addgroup -S nobody || groupadd nobody || true) && (adduser -S -G nobody -h /home/nobody -s /bin/sh nobody || useradd -m -g nobody -s /bin/sh nobody || true) && echo \"nobody:admin\" | chpasswd && mkdir -p /home/nobody && chown -R nobody:nobody /home/nobody",
+            "RUN apk add nginx openssh-server ca-certificates || true"
+        ]
+    },
+    "honey_artifacts": [
+        {
+            "path": "/etc/nginx/conf.d/default.conf",
+            "content": "server {\n    listen 80;\n    server_name archlinux.local;\n\n    location / {\n        proxy_pass http://localhost:8080;\n        proxy_set_header Host \\$host;\n        proxy_set_header X-Real-IP \\$remote_addr;\n    }\n\n    ssl_certificate /etc/ssl/certs/ca-certificates.crt;\n    ssl_certificate_key /etc/ssl/private/nginx.key;\n}\n"
+        },
+        {
+            "path": "/home/www-data/.ssh/id_rsa",
+            "content": "-----BEGIN RSA PRIVATE KEY-----\nMIIEpAIBAAKCAQEAnqZU6f1a2s3d4e5\n-----END RSA PRIVATE KEY-----"
+        },
+        {
+            "path": "/etc/hosts.deny",
+            "content": "* ALL: deny\n"
+        }
+    ]
+}

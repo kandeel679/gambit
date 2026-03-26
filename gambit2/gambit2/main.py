@@ -3,7 +3,7 @@ import os
 import sys
 import time
 import logging
-from dotenv import load_dotenv
+from dotenv import load_dotenv, set_key
 
 # Import Gambit Modules
 from clone_source import CloneSource
@@ -30,12 +30,33 @@ def print_banner():
 def main():
     print_banner()
     load_dotenv()
+    env_path = ".env"
     
-    if not os.getenv("GEMINI_API_KEY"):
-        logging.warning("GEMINI_API_KEY is not set in your .env file! Analysis and Synthesis will run in fallback/stub mode.")
-        time.sleep(2)
+    print("\n=== LLM Configuration Setup ===")
+    provider_choice = input("Choose LLM Provider (1 for Gemini API, 2 for Ollama) [default: 1]: ").strip()
+    if provider_choice == "2":
+        os.environ["LLM_PROVIDER"] = "ollama"
+        set_key(env_path, "LLM_PROVIDER", "ollama")
+        
+        default_ollama_host = os.getenv("OLLAMA_HOST", "http://localhost:11434")
+        ollama_host = input(f"Enter Ollama Host [default: {default_ollama_host}]: ").strip()
+        if ollama_host:
+            os.environ["OLLAMA_HOST"] = ollama_host
+            set_key(env_path, "OLLAMA_HOST", ollama_host)
+            
+        default_ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1")
+        ollama_model = input(f"Enter Ollama Model [default: {default_ollama_model}]: ").strip()
+        if ollama_model:
+            os.environ["OLLAMA_MODEL"] = ollama_model
+            set_key(env_path, "OLLAMA_MODEL", ollama_model)
+    else:
+        os.environ["LLM_PROVIDER"] = "gemini"
+        set_key(env_path, "LLM_PROVIDER", "gemini")
+        if not os.getenv("GEMINI_API_KEY"):
+            logging.warning("GEMINI_API_KEY is not set in your .env file! Analysis and Synthesis will run in fallback/stub mode.")
+            time.sleep(2)
 
-    print("=== Target Discovery Setup ===")
+    print("\n=== Target Discovery Setup ===")
     target_ip = input("Enter target IP to clone [default: 127.0.0.1]: ") or "127.0.0.1"
     target_user = input("Enter SSH username [default: root]: ") or "root"
     target_port = input("Enter SSH Port [default: 22]: ") or "22"

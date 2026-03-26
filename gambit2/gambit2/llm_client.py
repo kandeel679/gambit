@@ -5,6 +5,7 @@ import os
 import logging
 import re
 import time
+import requests
 from dotenv import load_dotenv
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [LLMClient] %(message)s")
@@ -19,10 +20,18 @@ class GambitLLMClient:
     honeypot blueprint, determining the vertical and spinning up honey-artifacts.
     """
     def __init__(self):
-        if not GEMINI_API_KEY:
-            logging.warning("GEMINI_API_KEY not found in environment. Please add it to your .env file.")
+        self.provider = os.getenv("LLM_PROVIDER", "ollama" if os.getenv("OLLAMA_HOST") else "gemini")
+        self.ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip('/')
+        self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1")
+
+        if self.provider == "gemini":
+            if not GEMINI_API_KEY:
+                logging.warning("GEMINI_API_KEY not found in environment. Please add it or switch to ollama.")
+            else:
+                self.client = genai.Client(api_key=GEMINI_API_KEY)
         else:
-            self.client = genai.Client(api_key=GEMINI_API_KEY)
+            logging.info(f"Using Ollama as LLM provider at {self.ollama_host} with model {self.ollama_model}")
+
 
     def synthesize_blueprint(self, source_metadata_path='source_metadata.json', output_path='gambit_blueprint.json'):
         if not os.path.exists(source_metadata_path):
@@ -57,23 +66,38 @@ Output MUST be valid JSON adhering STRICTLY to the following structure:
 }}
 
 CRITICAL: You MUST properly double-escape ALL backslashes inside your JSON strings! (e.g., use \\\\n or \\\\s instead of \\n or \\s).
-CRITICAL: When adding users via `dockerfile_instructions`, you MUST use robust resilient syntax that handles preexisting users or cross-OS compatibility. Use this exact pattern:
-"RUN (adduser -D -G <user> -h /home/<user> -s /bin/sh <user> || useradd -m -s /bin/sh <user> || true) && echo \\"<user>:admin\\" | chpasswd && mkdir -p /home/<user> && chown -R <user>:<user> /home/<user>"
+CRITICAL: ALL items in `dockerfile_instructions` MUST start safely with a valid Dockerfile instruction (e.g., RUN, COPY, ENV). DO NOT chain Dockerfile instructions with `&&` (e.g. `USER appuser && RUN ...`). Break them up into separate strings in the JSON array.
+CRITICAL: When adding users via `dockerfile_instructions`, you MUST use robust resilient syntax that handles preexisting users or cross-OS compatibility. Use this exact pattern (ensuring the group is created first):
+"RUN (addgroup -S <user> || groupadd <user> || true) && (adduser -S -G <user> -h /home/<user> -s /bin/sh <user> || useradd -m -g <user> -s /bin/sh <user> || true) && echo \\"<user>:admin\\" | chpasswd && mkdir -p /home/<user> && chown -R <user>:<user> /home/<user>"
 CRITICAL: To maintain a perfect Digital Twin, use a base_image that perfectly matches the source OS. BUT because package names fluctuate, ALL package manager shell commands MUST be fault-tolerant by appending `|| true` (e.g., `RUN apk add nginx openssh-server || true` or `RUN apt-get install -y vim || true`).
 
 Make sure the Dockerfile instructions are capable of running successfully in a stateless build. Provide at least 3 convincing honey_artifacts targeting common adversary loot paths.
 """
 
-        logging.info("Sending metadata to Gemini 2.5 Flash for Blueprint Synthesis...")
+        logging.info(f"Sending metadata to {self.provider} for Blueprint Synthesis...")
         max_retries = 3
         for attempt in range(max_retries):
             try:
-                response = self.client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
-                    config={"response_mime_type": "application/json"}
-                )
-                blueprint_json = response.text
+                if self.provider == "gemini":
+                    response = self.client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt,
+                        config={"response_mime_type": "application/json"}
+                    )
+                    blueprint_json = response.text
+                else:
+                    payload = {
+                        "model": self.ollama_model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "format": "json"
+                    }
+                    resp = requests.post(f"{self.ollama_host}/api/generate", json=payload, timeout=120)
+                    if not resp.ok:
+                        logging.error(f"Ollama API Error: {resp.text}")
+                    resp.raise_for_status()
+                    blueprint_json = resp.json().get("response", "")
+
                 
                 # Sanitize strict JSON escaping errors (e.g. \s -> \\s)
                 blueprint_json = re.sub(r'(?<!\\)\\(?![\\/bfnrtu"])', r'\\\\', blueprint_json)

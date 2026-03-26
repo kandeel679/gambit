@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import time
+import requests
 from datetime import datetime
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [AnalysisAgent] %(message)s")
@@ -19,12 +20,20 @@ class AdversaryAnalysisAgent:
     and maintains a Live Adversary Profile.
     """
     def __init__(self):
-        api_key = os.getenv("GEMINI_API_KEY")
-        if api_key:
-            self.client = genai.Client(api_key=api_key)
+        self.provider = os.getenv("LLM_PROVIDER", "ollama" if os.getenv("OLLAMA_HOST") else "gemini")
+        self.ollama_host = os.getenv("OLLAMA_HOST", "http://192.168.112.41:11434").rstrip('/')
+        self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1")
+
+        if self.provider == "gemini":
+            api_key = os.getenv("GEMINI_API_KEY")
+            if api_key:
+                self.client = genai.Client(api_key=api_key)
+            else:
+                logging.warning("GEMINI_API_KEY missing. Analysis Agent will run in stub mapping mode.")
+                self.model = None
         else:
-            logging.warning("GEMINI_API_KEY missing. Analysis Agent will run in stub mapping mode.")
-            self.model = None
+            logging.info(f"Analysis Agent initialized with Ollama at {self.ollama_host} (Model: {self.ollama_model})")
+
 
     def _initialize_session(self, session_id):
         if session_id not in active_profiles:
@@ -45,8 +54,8 @@ class AdversaryAnalysisAgent:
         
         logging.info(f"Analyzing command payload for session {session_id}...")
         
-        if not hasattr(self, 'client'):
-            # Fallback local heuristics
+        if self.provider == "gemini" and not hasattr(self, 'client'):
+            # Fallback local heuristics if Gemini is requested but no key exists
             ttp = {"ttp_id": "T1059", "name": "Command and Scripting Interpreter", "intent": "Execution"}
             if "curl" in command or "wget" in command:
                 ttp = {"ttp_id": "T1105", "name": "Ingress Tool Transfer", "intent": "Command and Control"}
@@ -73,14 +82,28 @@ class AdversaryAnalysisAgent:
         """
         for _ in range(3): # Simple retry for 503s
             try:
-                response = self.client.models.generate_content(
-                    model='gemini-2.5-flash',
-                    contents=prompt,
-                    config={"response_mime_type": "application/json"}
-                )
+                if getattr(self, "provider", "gemini") == "gemini":
+                    response = self.client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt,
+                        config={"response_mime_type": "application/json"}
+                    )
+                    text = response.text
+                else:
+                    payload = {
+                        "model": self.ollama_model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "format": "json"
+                    }
+                    resp = requests.post(f"{self.ollama_host}/api/generate", json=payload, timeout=20)
+                    if not resp.ok:
+                        logging.error(f"Ollama API Error: {resp.text}")
+                    resp.raise_for_status()
+                    text = resp.json().get("response", "")
                 
-                text = response.text
                 text = text.split("```json")[-1].split("```")[0].strip() if "```json" in text else text
+
                 
                 analysis = json.loads(text)
                 self._update_profile_state(session_id, command, analysis, analysis.get("actor_analysis", "Unknown"))
@@ -117,8 +140,10 @@ class AdversaryAnalysisAgent:
 def get_session_data(session_id):
     return active_profiles.get(session_id, None)
 
-# Global singleton hook
-agent = AdversaryAnalysisAgent()
+agent = None
 
 def analyze_command(session_id, command):
+    global agent
+    if agent is None:
+        agent = AdversaryAnalysisAgent()
     agent.analyze_command(session_id, command)

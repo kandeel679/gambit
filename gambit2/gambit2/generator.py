@@ -54,7 +54,14 @@ class GambitGenerator:
             if "ubuntu" in base_image or "debian" in base_image:
                 f.write("RUN apt-get update && apt-get install -y procps coreutils vim curl iproute2 \n")
             
+            valid_cmds = ("RUN ", "COPY ", "ADD ", "ENV ", "USER ", "WORKDIR ", "EXPOSE ", "CMD ", "ENTRYPOINT ", "ARG ")
             for inst in instructions:
+                inst_stripped = inst.strip()
+                if not any(inst_stripped.startswith(cmd) for cmd in valid_cmds):
+                    inst = f"RUN {inst_stripped}"
+                
+                # Sanitize literal newlines that break Dockerfile parsing
+                inst = inst.replace('\n', '\\n')
                 f.write(f"{inst}\n")
                 
             # Copy artifacts into the container
