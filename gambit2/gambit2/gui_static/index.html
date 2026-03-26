@@ -22,20 +22,31 @@
                 <p class="subtitle">Post-Incident Reports</p>
             </div>
             
-            <div class="search-container">
-                <input type="text" id="searchInput" placeholder="Search sessions...">
-                <span class="search-icon">⌕</span>
-            </div>
-
-            <div id="logList" class="log-list">
-                <!-- Log items will be dynamically injected here -->
-                <div class="loading-state">Loading sessions...</div>
-            </div>
-            
-            <div class="sidebar-footer">
-                <button id="refreshBtn" class="action-btn">
-                    <span>↻</span> Refresh Logs
+            <nav class="sidebar-nav">
+                <button class="nav-item active" data-view="dashboard">
+                    <span class="nav-icon">⏻</span> Dashboard
                 </button>
+                <button class="nav-item" data-view="analytics">
+                    <span class="nav-icon">📉</span> Analytics
+                </button>
+            </nav>
+
+            <div id="analyticsSidebar" class="view-content hidden">
+                <div class="search-container">
+                    <input type="text" id="searchInput" placeholder="Search sessions...">
+                    <span class="search-icon">⌕</span>
+                </div>
+
+                <div id="logList" class="log-list">
+                    <!-- Log items will be dynamically injected here -->
+                    <div class="loading-state">Loading sessions...</div>
+                </div>
+                
+                <div class="sidebar-footer">
+                    <button id="refreshBtn" class="action-btn">
+                        <span>↻</span> Refresh Logs
+                    </button>
+                </div>
             </div>
         </aside>
 
@@ -51,10 +62,85 @@
             </header>
 
             <div id="contentBody" class="content-body">
-                <div class="placeholder-content">
-                    <div class="placeholder-icon">⬡</div>
-                    <h3>Waiting for selection</h3>
-                    <p>Choose a session from the sidebar to load the forensic report.</p>
+                <!-- Dashboard View -->
+                <div id="dashboardView" class="view-container">
+                    <section class="config-section card glass">
+                        <div class="section-header">
+                            <h3>Honeypot Orchestration</h3>
+                            <p>Configure and deploy your decoy system</p>
+                        </div>
+                        
+                        <form id="configForm" class="config-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Target IP address</label>
+                                    <input type="text" name="target_ip" placeholder="127.0.0.1" value="127.0.0.1">
+                                </div>
+                                <div class="form-group">
+                                    <label>SSH Port</label>
+                                    <input type="text" name="target_port" placeholder="22" value="22">
+                                </div>
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <input type="text" name="target_user" placeholder="root" value="root">
+                                </div>
+                                <div class="form-group">
+                                    <label>Password</label>
+                                    <input type="password" name="target_pass" placeholder="••••••••">
+                                </div>
+                            </div>
+
+                            <div class="form-divider"></div>
+
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>LLM Provider</label>
+                                    <select name="llm_provider" id="llmProvider">
+                                        <option value="gemini">Google Gemini API</option>
+                                        <option value="ollama">Local Ollama</option>
+                                    </select>
+                                </div>
+                                <div id="ollamaFields" class="form-grid sub-grid hidden">
+                                    <div class="form-group">
+                                        <label>Ollama Host</label>
+                                        <input type="text" name="ollama_host" placeholder="http://localhost:11434">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Model</label>
+                                        <input type="text" name="ollama_model" placeholder="llama3.1">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <button type="submit" id="launchBtn" class="primary-btn">
+                                    <span class="btn-glow"></span>
+                                    🚀 Launch Gambit Orchestrator
+                                </button>
+                            </div>
+                        </form>
+                    </section>
+
+                    <section id="statusSection" class="status-section card glass hidden">
+                        <div class="section-header">
+                            <h3>Deployment Status</h3>
+                        </div>
+                        <div id="statusConsole" class="status-console">
+                            <div class="console-line system">Waiting for deployment command...</div>
+                        </div>
+                        <div class="progress-container">
+                            <div id="progressBar" class="progress-bar"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- Analytics View -->
+                <div id="analyticsView" class="view-container hidden">
+                    <div class="placeholder-content">
+                        <div class="placeholder-icon">⬡</div>
+                        <h3>Waiting for selection</h3>
+                        <p>Choose a session from the sidebar to load the forensic report.</p>
+                    </div>
                 </div>
             </div>
         </main>
