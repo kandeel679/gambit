@@ -1,0 +1,7 @@
+server {
+	listen 80;
+	serverside_max_body_size 10M;
+	location / {
+		root /var/www/app; 
+	}
+}

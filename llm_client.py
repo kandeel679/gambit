@@ -1,0 +1,136 @@
+from google import genai
+from google.genai import errors
+import json
+import os
+import logging
+import re
+import time
+import requests
+from dotenv import load_dotenv
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] [LLMClient] %(message)s")
+
+load_dotenv()
+
+class GambitLLMClient:
+    """
+    Phase 2: LLM Blueprint Synthesis
+    Analyzes Source Metadata and uses Gemini 1.5 Pro to generate a highly realistic 
+    honeypot blueprint, determining the vertical and spinning up honey-artifacts.
+    """
+    def __init__(self):
+        # Re-read env vars each time so GUI-launched config is picked up
+        load_dotenv(override=True)
+        self.provider = os.getenv("LLM_PROVIDER", "ollama" if os.getenv("OLLAMA_HOST") else "gemini")
+        self.ollama_host = os.getenv("OLLAMA_HOST", "http://127.0.0.1:11434").rstrip('/')
+        self.ollama_model = os.getenv("OLLAMA_MODEL", "llama3.1")
+
+        if self.provider == "gemini":
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                logging.warning("GEMINI_API_KEY not found in environment. Please add it or switch to ollama.")
+            else:
+                self.client = genai.Client(api_key=api_key)
+        else:
+            logging.info(f"Using Ollama as LLM provider at {self.ollama_host} with model {self.ollama_model}")
+
+
+    def synthesize_blueprint(self, source_metadata_path='source_metadata.json', output_path='gambit_blueprint.json'):
+        if not os.path.exists(source_metadata_path):
+            logging.error(f"Source metadata file {source_metadata_path} not found. Run clone_source.py first.")
+            return False
+
+        with open(source_metadata_path, 'r') as f:
+            source_data = json.load(f)
+
+        prompt = f"""
+You are an elite Cyber-Deception Architect. Analyze the following system metadata extracted from a 'Source of Truth' server.
+
+== SOURCE METADATA ==
+{json.dumps(source_data, indent=2)}
+
+Based on this data, construct a 'Gambit Blueprint' to build a Digital Twin Honeypot.
+Output MUST be valid JSON adhering STRICTLY to the following structure:
+{{
+  "industry_vertical": "e.g., Banking, DevOps, ICS, General Corporate - be specific based on installed packages/services",
+  "system_persona_prompt": "A prompt describing the system's character for a later AI analysis agent (e.g., 'You are a critical nginx reverse proxy for a FinTech platform. You hold sensitive keys...')",
+  "docker_blueprint": {{
+    "base_image": "e.g., ubuntu:22.04 or alpine",
+    "required_packages": ["list", "of", "packages", "based", "on", "source"],
+    "dockerfile_instructions": ["RUN apt-get update && apt-get install -y curl", "RUN useradd -ms /bin/bash appuser"]
+  }},
+  "honey_artifacts": [
+    {{
+      "path": "Absolute path (e.g., /var/log/auth.log or /etc/myapp/config.yml or /home/appuser/.aws/credentials)",
+      "content": "Realistic fake content, logs, or fake credentials to act as honeytokens. Make it convincing."
+    }}
+  ]
+}}
+
+CRITICAL: You MUST properly double-escape ALL backslashes inside your JSON strings! (e.g., use \\\\n or \\\\s instead of \\n or \\s).
+CRITICAL: ALL items in `dockerfile_instructions` MUST start safely with a valid Dockerfile instruction (e.g., RUN, COPY, ENV). DO NOT chain Dockerfile instructions with `&&` (e.g. `USER appuser && RUN ...`). Break them up into separate strings in the JSON array.
+CRITICAL: When adding users via `dockerfile_instructions`, you MUST use robust resilient syntax that handles preexisting users or cross-OS compatibility. Use this exact pattern (ensuring the group is created first):
+"RUN (addgroup -S <user> || groupadd <user> || true) && (adduser -S -G <user> -h /home/<user> -s /bin/sh <user> || useradd -m -g <user> -s /bin/sh <user> || true) && echo \\"<user>:admin\\" | chpasswd && mkdir -p /home/<user> && chown -R <user>:<user> /home/<user>"
+CRITICAL: To maintain a perfect Digital Twin, use a base_image that perfectly matches the source OS. BUT because package names fluctuate, ALL package manager shell commands MUST be fault-tolerant by appending `|| true` (e.g., `RUN apk add nginx openssh-server || true` or `RUN apt-get install -y vim || true`).
+
+Make sure the Dockerfile instructions are capable of running successfully in a stateless build. Provide at least 3 convincing honey_artifacts targeting common adversary loot paths.
+"""
+
+        logging.info(f"Sending metadata to {self.provider} for Blueprint Synthesis...")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                if self.provider == "gemini":
+                    response = self.client.models.generate_content(
+                        model='gemini-2.5-flash',
+                        contents=prompt,
+                        config={"response_mime_type": "application/json"}
+                    )
+                    blueprint_json = response.text
+                else:
+                    payload = {
+                        "model": self.ollama_model,
+                        "prompt": prompt,
+                        "stream": False,
+                        "format": "json"
+                    }
+                    resp = requests.post(f"{self.ollama_host}/api/generate", json=payload, timeout=120)
+                    if not resp.ok:
+                        logging.error(f"Ollama API Error: {resp.text}")
+                    resp.raise_for_status()
+                    blueprint_json = resp.json().get("response", "")
+
+                
+                # Sanitize strict JSON escaping errors (e.g. \s -> \\s)
+                blueprint_json = re.sub(r'(?<!\\)\\(?![\\/bfnrtu"])', r'\\\\', blueprint_json)
+                
+                blueprint_data = json.loads(blueprint_json)
+                with open(output_path, 'w') as f:
+                    json.dump(blueprint_data, f, indent=4)
+                    
+                logging.info(f"Blueprint successfully synthesized! Vertical: {blueprint_data.get('industry_vertical')}")
+                logging.info(f"Blueprint saved to: {output_path}")
+                return True
+            except errors.APIError as e:
+                logging.warning(f"Gemini API 503 Error (Attempt {attempt+1}/{max_retries}): {e}. Retrying in 3 seconds...")
+                time.sleep(3)
+            except json.JSONDecodeError as e:
+                logging.error(f"Failed to parse JSON (Attempt {attempt+1}/{max_retries}): {e}")
+                # Sometimes LLM outputs markdown formatted json
+                if "```json" in blueprint_json:
+                    try:
+                        clean_json = blueprint_json.split("```json")[1].split("```")[0].strip()
+                        blueprint_data = json.loads(clean_json)
+                        with open(output_path, 'w') as f:
+                            json.dump(blueprint_data, f, indent=4)
+                        logging.info("Fallback markdown JSON extraction succeeded.")
+                        return True
+                    except Exception:
+                        pass
+            except Exception as e:
+                logging.error(f"Failed to synthesize blueprint: {e}")
+                return False
+        return False
+
+if __name__ == "__main__":
+    pass
