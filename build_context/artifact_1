@@ -1,1 +1,1 @@
-ssh-rsa AAAA... rsa key for a user with high privileges
+<?php define('DB_HOST', 'db.internal.lan'); define('DB_USER', 'app_dev'); define('DB_PASS', 'p@ssw0rd123!'); define('DB_NAME', 'dev_webapp'); ?>

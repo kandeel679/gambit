@@ -1,7 +1,1 @@
-server {
-	listen 80;
-	serverside_max_body_size 10M;
-	location / {
-		root /var/www/app; 
-	}
-}
+server { listen 8080; location /api/v1/data { proxy_pass http://backend_internal:8000; proxy_set_header X-API-KEY "ph_api_key_ab_cd_ef"; } }

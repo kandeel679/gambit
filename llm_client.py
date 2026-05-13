@@ -62,7 +62,7 @@ Output MUST be valid JSON adhering STRICTLY to the following structure:
   "honey_artifacts": [
     {{
       "path": "Absolute path (e.g., /var/log/auth.log or /etc/myapp/config.yml or /home/appuser/.aws/credentials)",
-      "content": "Realistic fake content, logs, or fake credentials to act as honeytokens. Make it convincing."
+      "content": "Realistic fake content. CRITICAL: NEVER generate full SSH private keys, certificates, or massive log files as they cause token limits to be exceeded. Use short placeholders instead (e.g., <PLACEHOLDER_SSH_KEY> or <SHORT_LOG_SNIPPET>). Keep ALL artifact content under 200 characters total."
     }}
   ]
 }}
@@ -72,6 +72,7 @@ CRITICAL: ALL items in `dockerfile_instructions` MUST start safely with a valid 
 CRITICAL: When adding users via `dockerfile_instructions`, you MUST use robust resilient syntax that handles preexisting users or cross-OS compatibility. Use this exact pattern (ensuring the group is created first):
 "RUN (addgroup -S <user> || groupadd <user> || true) && (adduser -S -G <user> -h /home/<user> -s /bin/sh <user> || useradd -m -g <user> -s /bin/sh <user> || true) && echo \\"<user>:admin\\" | chpasswd && mkdir -p /home/<user> && chown -R <user>:<user> /home/<user>"
 CRITICAL: To maintain a perfect Digital Twin, use a base_image that perfectly matches the source OS. BUT because package names fluctuate, ALL package manager shell commands MUST be fault-tolerant by appending `|| true` (e.g., `RUN apk add nginx openssh-server || true` or `RUN apt-get install -y vim || true`).
+CRITICAL: NEVER end a path or string with a trailing backslash (e.g. use "C:\\Windows" instead of "C:\\Windows\\"). Double-escape all backslashes!
 
 Make sure the Dockerfile instructions are capable of running successfully in a stateless build. Provide at least 3 convincing honey_artifacts targeting common adversary loot paths.
 """
@@ -104,7 +105,7 @@ Make sure the Dockerfile instructions are capable of running successfully in a s
                 # Sanitize strict JSON escaping errors (e.g. \s -> \\s)
                 blueprint_json = re.sub(r'(?<!\\)\\(?![\\/bfnrtu"])', r'\\\\', blueprint_json)
                 
-                blueprint_data = json.loads(blueprint_json)
+                blueprint_data = json.loads(blueprint_json, strict=False)
                 with open(output_path, 'w') as f:
                     json.dump(blueprint_data, f, indent=4)
                     
@@ -116,11 +117,12 @@ Make sure the Dockerfile instructions are capable of running successfully in a s
                 time.sleep(3)
             except json.JSONDecodeError as e:
                 logging.error(f"Failed to parse JSON (Attempt {attempt+1}/{max_retries}): {e}")
+                logging.error(f"Raw LLM Output was:\n{blueprint_json}")
                 # Sometimes LLM outputs markdown formatted json
                 if "```json" in blueprint_json:
                     try:
                         clean_json = blueprint_json.split("```json")[1].split("```")[0].strip()
-                        blueprint_data = json.loads(clean_json)
+                        blueprint_data = json.loads(clean_json, strict=False)
                         with open(output_path, 'w') as f:
                             json.dump(blueprint_data, f, indent=4)
                         logging.info("Fallback markdown JSON extraction succeeded.")
