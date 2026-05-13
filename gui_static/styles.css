@@ -1,14 +1,14 @@
 :root {
-    --bg-color: #0b0c10;
-    --sidebar-bg: rgba(18, 20, 26, 0.7);
-    --card-bg: rgba(30, 33, 43, 0.6);
-    --border-color: rgba(255, 255, 255, 0.08);
-    --text-primary: #e2e8f0;
-    --text-secondary: #94a3b8;
-    --accent-color: #38bdf8;
+    --bg-color: #322721;
+    --sidebar-bg: rgba(50, 39, 33, 0.7);
+    --card-bg: rgba(60, 48, 41, 0.6);
+    --border-color: rgba(241, 241, 231, 0.1);
+    --text-primary: #f1f1e7;
+    --text-secondary: #dbcbc3;
+    --accent-color: #a9948f;
     --danger-color: #f43f5e;
     --success-color: #10b981;
-    --accent-glow: rgba(56, 189, 248, 0.2);
+    --accent-glow: rgba(169, 148, 143, 0.2);
     --font-main: 'Inter', -apple-system, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 }
@@ -28,7 +28,7 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
-    background-image: radial-gradient(circle at top right, rgba(56,189,248,0.1), transparent 400px),
+    background-image: radial-gradient(circle at top right, var(--accent-glow), transparent 400px),
                       radial-gradient(circle at bottom left, rgba(244,63,94,0.05), transparent 400px);
 }
 
@@ -373,8 +373,8 @@ body {
 .primary-btn {
     width: 100%;
     position: relative;
-    background: #38bdf8;
-    color: #0b0c10;
+    background: var(--accent-color);
+    color: var(--bg-color);
     border: none;
     padding: 16px;
     border-radius: 12px;
@@ -416,8 +416,8 @@ body {
     line-height: 1.4;
 }
 
-.console-line.system { color: #94a3b8; }
-.console-line.info { color: #38bdf8; }
+.console-line.system { color: var(--text-secondary); }
+.console-line.info { color: var(--accent-color); }
 .console-line.success { color: #10b981; }
 .console-line.error { color: #f43f5e; }
 .console-line.warning { color: #f59e0b; }
@@ -436,7 +436,7 @@ body {
 .progress-bar {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #38bdf8, #818cf8);
+    background: linear-gradient(90deg, var(--accent-color), var(--text-secondary));
     transition: width 0.5s ease;
     box-shadow: 0 0 10px var(--accent-glow);
 }
@@ -644,8 +644,8 @@ body {
     display: inline-block;
     width: 18px;
     height: 18px;
-    border: 2px solid rgba(11, 12, 16, 0.3);
-    border-top-color: #0b0c10;
+    border: 2px solid rgba(241, 241, 231, 0.1);
+    border-top-color: var(--bg-color);
     border-radius: 50%;
     animation: spin 0.6s linear infinite;
     vertical-align: middle;

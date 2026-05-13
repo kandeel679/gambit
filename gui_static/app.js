@@ -115,10 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
             pollStatus();
             startLiveLogPolling();
         } catch (error) {
-            addConsoleLine("Launch failed: " + error.message, "error");
-            isDeploying = false;
             launchBtn.disabled = false;
-            launchBtn.textContent = '🚀 Launch Gambit Orchestrator';
+            launchBtn.textContent = '🚀 Launch Mirage Orchestrator';
+            addConsoleLine(`Error: ${error.message}`, 'error');
         }
     });
 
@@ -187,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 launchBtn.disabled = false;
                 launchBtn.innerHTML = '✅ Honeypot Live';
                 progressBar.style.width = '100%';
-                addConsoleLine("Gambit System is fully operational on port 2222.", "success");
+                addConsoleLine("Mirage System is fully operational on port 2222.", "success");
             } else if (status.error) {
                 isDeploying = false;
                 launchBtn.disabled = false;
@@ -195,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 addConsoleLine("Error: " + status.error, "error");
                 // Reset button after 3 seconds so user can retry
                 setTimeout(() => {
-                    launchBtn.innerHTML = '🚀 Launch Gambit Orchestrator';
+                    launchBtn.innerHTML = '🚀 Launch Mirage Orchestrator';
                     launchBtn.disabled = false;
                 }, 3000);
             } else {
